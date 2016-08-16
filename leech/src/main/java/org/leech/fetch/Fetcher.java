@@ -1,11 +1,8 @@
 package org.leech.fetch;
 
-import org.leech.common.http.HttpCallback;
 import org.leech.common.http.HttpClient;
-import org.leech.common.http.HttpRequest;
-import org.leech.common.http.HttpResponse;
+import org.leech.common.task.TaskExecutor;
 import org.leech.parse.ParseService;
-import org.leech.parse.ParseTask;
 import org.leech.settings.Settings;
 
 import java.util.concurrent.ExecutorService;
@@ -17,10 +14,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author Loster on 2016/8/16.
  */
-public class Fetcher {
+public class Fetcher implements TaskExecutor<FetchTask> {
 
-    private final HttpClient httpClient;
-    private final ParseService parseService;
     private ExecutorService executor;
     private final static ThreadFactory fetcherThreadFactory = new ThreadFactory() {
         AtomicInteger fetchIdx = new AtomicInteger();
@@ -36,13 +31,12 @@ public class Fetcher {
         }
     };
 
-    public Fetcher(Settings settings, HttpClient httpClient, ParseService parseService) {
-        this.httpClient = httpClient;
-        this.parseService = parseService;
+    public Fetcher(Settings settings) {
     }
 
+    @Override
     public void submit(FetchTask task) {
-        this.executor.submit(new RunnableFetchTask(task, httpClient));
+        this.executor.submit(task);
     }
 
     public void start() {
@@ -61,43 +55,4 @@ public class Fetcher {
         }
     }
 
-    /**
-     * @author Loster on 2016/8/16.
-     */
-    public class RunnableFetchTask implements Runnable {
-
-        private final FetchTask task;
-        private final HttpClient httpClient;
-
-        public RunnableFetchTask(FetchTask task, HttpClient httpClient) {
-            this.task = task;
-            this.httpClient = httpClient;
-        }
-
-        @Override
-        public void run() {
-            HttpRequest request = createRequest(task);
-            httpClient.get(request, new HttpCallback() {
-
-                @Override
-                public void onCompleted(HttpResponse response) {
-                    parseService.submit(new ParseTask(response));
-                }
-
-                @Override
-                public void onFailed(Exception ex) {
-
-                }
-
-                @Override
-                public void onCancelled() {
-
-                }
-            });
-        }
-
-        private HttpRequest createRequest(FetchTask task) {
-            return HttpRequest.create(task.url());
-        }
-    }
 }

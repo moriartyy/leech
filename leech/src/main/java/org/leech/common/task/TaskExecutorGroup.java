@@ -1,12 +1,6 @@
 package org.leech.common.task;
 
 import org.leech.LeechException;
-import org.leech.common.http.HttpClient;
-import org.leech.fetch.FetchTask;
-import org.leech.fetch.Fetcher;
-import org.leech.fetch.FetcherGroup;
-import org.leech.parse.ParseService;
-import org.leech.settings.Settings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author Loster on 2016/8/16.
  */
-public class TaskExecutorGroup<T extends TaskExecutor> {
+public abstract class TaskExecutorGroup<T extends Task> {
 
     private final TaskExecutor[] executors;
     private final AtomicInteger idx = new AtomicInteger();
@@ -28,26 +22,24 @@ public class TaskExecutorGroup<T extends TaskExecutor> {
         }
     }
 
-    private abstract TaskExecutor createFetcher(HttpClient httpClient, ParseService parseService) {
-        return new Fetcher(settings, httpClient, parseService);
+    protected abstract TaskExecutor createFetcher();
+
+    public void submit(T task) {
+        nextExecutor().submit(task);
     }
 
-    public void submit(FetchTask task) {
-        nextFetcher().submit(task);
-    }
-
-    private Fetcher nextFetcher() {
-        return fetchers[Math.abs(idx.getAndIncrement() % fetchers.length)];
+    private TaskExecutor nextExecutor() {
+        return executors[Math.abs(idx.getAndIncrement() % executors.length)];
     }
 
     public void start() {
-        for (int i=0;i<fetchers.length; i++) {
+        for (int i=0;i<executors.length; i++) {
             try {
-                fetchers[i].start();
+                executors[i].start();
             } catch (Exception e) {
                 for(int j=0; j<i; j++) {
                     try {
-                        fetchers[j].shutdown();
+                        executors[j].shutdown();
                     } catch (Exception shutdownError) {
                         logger.error("Failed to shutdown fetcher", shutdownError);
                     }
@@ -58,9 +50,9 @@ public class TaskExecutorGroup<T extends TaskExecutor> {
     }
 
     public void shutdown() {
-        for (int i=0;i<fetchers.length; i++) {
+        for (int i=0;i<executors.length; i++) {
             try {
-                fetchers[i].shutdown();
+                executors[i].shutdown();
             } catch (Exception shutdownError) {
                 logger.error("Failed to shutdown fetcher", shutdownError);
             }
