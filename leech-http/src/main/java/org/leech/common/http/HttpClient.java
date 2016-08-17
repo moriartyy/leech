@@ -1,26 +1,14 @@
 package org.leech.common.http;
 
-import com.google.inject.Inject;
-import org.leech.common.component.AbstractLifecyleComponent;
-import org.leech.settings.Settings;
-
 /**
  * @author Loster on 2016/8/16.
  */
-public class HttpClient extends AbstractLifecyleComponent {
+public class HttpClient {
 
-    @Inject
-    public HttpClient(Settings settings) {
-        super(settings);
+    public HttpClient() {
     }
 
-    @Override
-    protected void doStart() {
-
-    }
-
-    @Override
-    protected void doStop() {
+    public void stop() {
 
     }
 
