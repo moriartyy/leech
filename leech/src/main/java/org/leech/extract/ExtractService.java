@@ -1,4 +1,4 @@
-package org.leech.parse;
+package org.leech.extract;
 
 import com.google.inject.Inject;
 import org.leech.WebResource;
@@ -15,17 +15,16 @@ import java.util.concurrent.ThreadFactory;
 /**
  * @author Loster on 2016/8/16.
  */
-public class ParseService extends AbstractLifecycleComponent {
+public class ExtractService extends AbstractLifecycleComponent {
 
     private final TaskExecutorGroup executors;
-    private final Parser parser;
     private final static ThreadFactory parserThreadFactory = ThreadFactoryFactory.threadFactory("parsers", "parser");
+    private ExtractorChooser extractorChooser;
 
     @Inject
-    public ParseService(final Settings settings) {
-        super(settings);
+    public ExtractService(Settings settings, ExtractorChooser extractorChooser) {
         final int parserNumber = settings.getInt("leach.parser.number", Runtime.getRuntime().availableProcessors());
-        this.parser = new Parser(settings);
+        this.extractorChooser = extractorChooser;
         this.executors = new TaskExecutorGroup(parserNumber) {
             @Override
             protected TaskExecutor createExecutor() {
@@ -34,13 +33,20 @@ public class ParseService extends AbstractLifecycleComponent {
         };
     }
 
-    public void submit(WebResource webResource) {
-        executors.submit(new Task() {
+    public void extract(ExtractRequest request, ExtractHandler handler) {
+        final TaskExecutor executor = executors.nextExecutor();
+        final ExtractContext context = new ExtractContext(request, handler, executor);
+        final Extractor extractor = extractor();
+        executor.execute(new Task() {
             @Override
-            public void run() {
-                parser.parse(taskSpec);
+            protected void doRun() {
+                extractor.process(context);
             }
         });
+    }
+
+    private Extractor extractor() {
+        return extractorChooser.choose();
     }
 
     @Override

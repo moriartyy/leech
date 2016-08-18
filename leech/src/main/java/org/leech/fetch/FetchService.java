@@ -1,15 +1,13 @@
 package org.leech.fetch;
 
 import com.google.inject.Inject;
-import org.leech.WebResource;
-import org.leech.WebResourceHandler;
 import org.leech.common.component.AbstractLifecycleComponent;
 import org.leech.common.http.*;
 import org.leech.task.SameThreadTaskExecutor;
 import org.leech.task.Task;
 import org.leech.task.TaskExecutor;
 import org.leech.task.TaskExecutorGroup;
-import org.leech.parse.ParseService;
+import org.leech.extract.ExtractService;
 import org.leech.settings.Settings;
 
 /**
@@ -17,16 +15,16 @@ import org.leech.settings.Settings;
  */
 public class FetchService extends AbstractLifecycleComponent {
 
-    private final TaskExecutorGroup fetcherGroup;
+    private final TaskExecutorGroup executors;
     private final HttpClient httpClient;
-    private final ParseService parseService;
+    private final ExtractService extractService;
 
     @Inject
-    public FetchService(final Settings settings, ParseService parseService) {
+    public FetchService(final Settings settings, ExtractService extractService) {
         this.httpClient = createHttpClient(settings);
-        this.parseService = parseService;
+        this.extractService = extractService;
 
-        this.fetcherGroup = new TaskExecutorGroup(1) {
+        this.executors = new TaskExecutorGroup(1) {
             @Override
             protected TaskExecutor createExecutor() {
                 return new SameThreadTaskExecutor();
@@ -39,47 +37,46 @@ public class FetchService extends AbstractLifecycleComponent {
         return null;
     }
 
-    public void fetch(final WebResource webResource) {
-        final WebResource finalWebResource = webResource;
-        fetcherGroup.execute(new Task() {
+    public void fetch(final FetchRequest request, final FetchHandler handler) {
+        final FetchContext context = new FetchContext(request, handler);
+        executors.execute(new Task() {
             @Override
             protected void doRun() {
-                WebResourceHandler handler = webResource.handler();
-                handler.fetch();
+                asyncFetch(context);
             }
         });
     }
 
-    private void asyncFetch(final WebResource webResource) {
-        HttpRequest request = HttpRequest.create(webResource.url());
-
-        httpClient.get(request, new HttpCallback() {
+    private void asyncFetch(final FetchContext context) {
+        HttpRequest httpRequest = HttpRequest.create(context.url());
+        httpClient.get(httpRequest, new HttpCallback() {
 
             @Override
             public void onCompleted(HttpResponse response) {
                 if (response.status() != HttpStatus.OK) {
-                    handleFetchFailed(webResource);
+                    handleFetchFailed(context);
                 } else {
-                    parseService.submit(new ParseTask(webResource));
+                    context.complete(new FetchResult(response));
                 }
             }
 
             @Override
             public void onFailed(Exception ex) {
-                handleFetchFailed(webResource);
+                handleFetchFailed(context);
             }
 
             @Override
             public void onCancelled() {
-                handleFetchFailed(webResource);
+                handleFetchFailed(context);
             }
         });
     }
 
-    private void handleFetchFailed(WebResource webResource) {
-        if (webResource.retries() < webResource.maxRetries()) {
-            webResource.increaseRetries();
-            asyncFetch(webResource);
+    private void handleFetchFailed(FetchContext context) {
+        final FetchRequest request = context.request();
+        if (request.retries() < request.maxRetries()) {
+            request.increaseRetries();
+            asyncFetch(context);
         } else {
             // TODO how to handle failed fetch task.
         }
@@ -87,11 +84,11 @@ public class FetchService extends AbstractLifecycleComponent {
 
     @Override
     protected void doStart() {
-        fetcherGroup.start();
+        executors.start();
     }
 
     @Override
     protected void doStop() {
-        fetcherGroup.shutdown();
+        executors.shutdown();
     }
 }

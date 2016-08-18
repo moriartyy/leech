@@ -1,6 +1,6 @@
 package org.leech.task;
 
-import org.leech.fetch.FetcherException;
+import org.leech.fetch.FetchException;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,7 +39,7 @@ public class SingleThreadTaskExecutor implements TaskExecutor {
         } catch (InterruptedException ignored) {
         }
         if (!terminated) {
-            throw new FetcherException("Failed to shutdown fetcher.");
+            throw new FetchException("Failed to shutdown fetcher.");
         }
     }
 }

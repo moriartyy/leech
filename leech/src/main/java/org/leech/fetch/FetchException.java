@@ -5,13 +5,13 @@ import org.leech.LeechException;
 /**
  * @author Loster on 2016/8/16.
  */
-public class FetcherException extends LeechException {
+public class FetchException extends LeechException {
 
-    public FetcherException(String message, Throwable cause) {
+    public FetchException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public FetcherException(String message) {
+    public FetchException(String message) {
         super(message);
     }
 }
