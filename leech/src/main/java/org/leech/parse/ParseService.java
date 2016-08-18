@@ -1,7 +1,8 @@
 package org.leech.parse;
 
 import com.google.inject.Inject;
-import org.leech.common.component.AbstractLifecyleComponent;
+import org.leech.WebResource;
+import org.leech.common.component.AbstractLifecycleComponent;
 import org.leech.common.concurrent.ThreadFactoryFactory;
 import org.leech.task.SingleThreadTaskExecutor;
 import org.leech.task.Task;
@@ -14,7 +15,7 @@ import java.util.concurrent.ThreadFactory;
 /**
  * @author Loster on 2016/8/16.
  */
-public class ParseService extends AbstractLifecyleComponent {
+public class ParseService extends AbstractLifecycleComponent {
 
     private final TaskExecutorGroup executors;
     private final Parser parser;
@@ -33,7 +34,7 @@ public class ParseService extends AbstractLifecyleComponent {
         };
     }
 
-    public void submit(final ParseTaskSpec taskSpec) {
+    public void submit(WebResource webResource) {
         executors.submit(new Task() {
             @Override
             public void run() {

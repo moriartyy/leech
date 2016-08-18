@@ -7,12 +7,12 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Loster on 2016/8/16.
  */
-public abstract class AbstractLifecyleComponent implements LifecycleComponent {
+public abstract class AbstractLifecycleComponent implements LifecycleComponent {
 
     protected final Logger logger;
     private final String componentName;
 
-    protected AbstractLifecyleComponent(Settings settings) {
+    protected AbstractLifecycleComponent() {
         logger = LoggerFactory.getLogger(getClass());
         this.componentName = getClass().getName();
     }

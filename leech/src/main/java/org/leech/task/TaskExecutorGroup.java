@@ -26,11 +26,7 @@ public abstract class TaskExecutorGroup {
 
     protected abstract TaskExecutor createExecutor();
 
-    public void submit(Task task) {
-        nextExecutor().execute(task);
-    }
-
-    private TaskExecutor nextExecutor() {
+    public TaskExecutor nextExecutor() {
         return executors.get(Math.abs(idx.getAndIncrement() % executors.size()));
     }
 
@@ -59,5 +55,9 @@ public abstract class TaskExecutorGroup {
                 logger.error("Failed to shutdown fetcher", shutdownError);
             }
         }
+    }
+
+    public void execute(Task task) {
+        nextExecutor().execute(task);
     }
 }
